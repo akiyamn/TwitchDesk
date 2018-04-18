@@ -3,6 +3,11 @@
 TwitchDesk is a program written in Python 3.6 which uses the Twitch API to automatically
 notify a desktop user when a Twitch channel goes live. TwitchDesk runs in the background and will poll the API periodically for updates. Note that you will need a registered Twitch application with a Client ID to use this application.
 
+Currently this application only supports GNU/Linux or any other system that supports the `notify-send` command.
+
+
+![Example of a TwitchDesk notification](http://slimecorp.biz/i/1524062266.png)
+
 
 ## Basic Usage
 To run TwitchDesk, run:
