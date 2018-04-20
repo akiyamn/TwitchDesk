@@ -11,7 +11,7 @@ import time
 KEY = ""
 HEADERS = ""
 HERE = os.path.dirname(os.path.realpath(__file__))
-INTERVAL = 120
+INTERVAL = 180
 DEBUG = False
 
 uri = 'https://api.twitch.tv/helix/streams'
@@ -21,15 +21,19 @@ channelList = {}
 
 # == Functions
 
-def notify(title, text="", icon=""):
+def notify(title, text="", icon="", ):
     subprocess.Popen(["notify-send", "-i", icon, title, text])
+    if DEBUG:
+        print(title + "\n" + text)
 
 
 def error(msg):
-    print("ERROR: " + msg)
     if DEBUG:
         notify("ERROR", msg)
+    else:
+        print("ERROR: " + msg)
     sys.exit(1)
+
 
 def download(url, filename):
     if not os.path.isfile(filename):
@@ -46,13 +50,30 @@ def download(url, filename):
         return True
 
 
+def readFile(filename):
+    if os.path.exists(filename):
+        try:
+            file = open(filename, "r")
+            output = file.read()
+            file.close()
+            return output
+        except IOError as e:
+            error("IOError: " + e)
+    else:   # Display error and create new file if doesn't exist
+        with open(filename, "w"): pass
+        return ""
+
+
+
 def update():
-    print("update")
+    print("Update")
     oldList = dict(channelList)
     try:
-        liveChannels = requests.get(uri, headers=HEADERS).json()
-    except requests.exceptions.HTTPError as err:
-        error(err)
+        r = requests.get(uri, headers=HEADERS)
+        r.raise_for_status()
+    except requests.exceptions.RequestException as err:
+        error(str(err))
+    liveChannels = r.json()
 
     if liveChannels["data"]:
         for liveChannel in liveChannels["data"]:
@@ -63,8 +84,8 @@ def update():
 
             try:
                 liveProfile = requests.get("https://api.twitch.tv/helix/users?login=" + name, headers=HEADERS).json()["data"][0]
-            except requests.exceptions.HTTPError as err:
-                error(err)
+            except requests.exceptions.RequestException as err:
+                error(str(err))
 
             displayName = liveProfile["display_name"]
             thumb = liveProfile["profile_image_url"]
@@ -74,35 +95,20 @@ def update():
 
             if not oldList[name]:
                 notify(displayName + " is now online on Twitch!", desc + "\nViewers: " + str(viewerCount), HERE + "/thumb/" + name + ".png")
-    else:
-        error("Twitch API returned no data!")
 
 
 # == Main Body
 
-if os.path.exists("id.txt"):   # Reads key from id.txt if no errors
-    try:
-        keyFile = open("id.txt", "rb")
-        KEY = keyFile.read().decode().replace("\n","")
-        HEADERS = {'Accept' : 'application/vnd.twitchtv.v5+json', 'Client-ID': KEY}
-        keyFile.close()
-    except IOError as e:
-        error("IOError: " + e)
-else:   # Display error and create new file if id.txt doesn't exist
-    with open("id.txt", "w"): pass
-    error("Please add a Twitch Client ID to your id.txt file!")
-
-
-if os.path.exists("channels.txt"):
-    try:
-        channelFile = open("channels.txt", "rb")
-        rawChannelList = channelFile.read().decode().split("\n")
-        channelFile.close()
-    except IOError as e:
-        print("IOError: " + e)
+KEY = readFile("id.txt").replace("\n","")
+if KEY:
+    HEADERS = {'Accept' : 'application/vnd.twitchtv.v5+json', 'Client-ID': KEY}
 else:
-    with open("channels.txt", "w"): pass
-    error("A channel.txt file was not found, so one was created.")
+    error("Please add a Twitch Client ID to your id.txt file! Aborting...")
+
+rawChannelList = readFile("channels.txt").split("\n")
+if not rawChannelList:
+    error("A channel.txt file was not found, so one was created. Aborting...")
+
 
 if not os.path.exists("thumb"):
     os.makedirs("thumb")
@@ -124,7 +130,12 @@ for channel in channelList:
 
 # == Main Loop
 
-while True:
-    update()
-    print("Waiting " + str(INTERVAL) + " seconds")
-    time.sleep(INTERVAL)
+escape = False
+while not escape:
+    try:
+        update()
+        print("Waiting " + str(INTERVAL) + " seconds...")
+        time.sleep(INTERVAL)
+    except KeyboardInterrupt:
+        print("\nExitting...")
+        escape = True
