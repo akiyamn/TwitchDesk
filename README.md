@@ -30,6 +30,7 @@ On the first launch, slimeshot will create a file named `id.txt` if it doesn't e
 
 ### Python Libs
 -   request
+-   playsound (<b>optional</b>, but sounds will not play without it)
 
 ## Installation
 
