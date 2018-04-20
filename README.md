@@ -41,4 +41,4 @@ On Debain based systems this would be achieved by running:
 
 "request" listed must be installed using pip. This can be done by running:
 
-`pip3 install request`
+`pip3 install request playsound`
