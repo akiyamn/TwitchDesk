@@ -5,18 +5,27 @@ import os
 import subprocess
 import time
 
-
 # == Variables
+
+__version__ = "1.0.0-rc.1"
 
 KEY = ""
 HEADERS = ""
 HERE = os.path.dirname(os.path.realpath(__file__))
-INTERVAL = 180
+INTERVAL = 60
 DEBUG = False
+SOUND = True
 
 uri = 'https://api.twitch.tv/helix/streams'
 rawData = []
 channelList = {}
+
+try:
+    from playsound import playsound
+except ImportError as e:
+    from dummy_playsound import *
+    print("WARNING: playsound module not found, sound will not play.")
+    SOUND = False
 
 
 # == Functions
@@ -64,6 +73,11 @@ def readFile(filename):
         return ""
 
 
+def sound(file):
+    if not SOUND:
+        return
+    playsound(file)
+
 
 def update():
     print("Update")
@@ -82,19 +96,20 @@ def update():
             viewerCount = liveChannel["viewer_count"]
             channelList[name] = True
 
-            try:
-                liveProfile = requests.get("https://api.twitch.tv/helix/users?login=" + name, headers=HEADERS).json()["data"][0]
-            except requests.exceptions.RequestException as err:
-                error(str(err))
-
-            displayName = liveProfile["display_name"]
-            thumb = liveProfile["profile_image_url"]
-
-            if not download(thumb, "thumb/" + name + ".png"):
-                error("Could not download profile image from Twitch!")
-
             if not oldList[name]:
-                notify(displayName + " is now online on Twitch!", desc + "\nViewers: " + str(viewerCount), HERE + "/thumb/" + name + ".png")
+                try:
+                    liveProfile = requests.get("https://api.twitch.tv/helix/users?login=" + name, headers=HEADERS).json()["data"][0]
+                except requests.exceptions.RequestException as err:
+                    error(str(err))
+
+                displayName = liveProfile["display_name"]
+                thumb = liveProfile["profile_image_url"]
+
+                if not download(thumb, "thumbs/" + name + ".png"):
+                    error("Could not download profile image from Twitch!")
+
+                notify(displayName + " is now online on Twitch!", desc + "\nViewers: " + str(viewerCount), HERE + "/thumbs/" + name + ".png")
+                playsound("notify.wav")
 
 
 # == Main Body
@@ -110,8 +125,8 @@ if not rawChannelList:
     error("A channel.txt file was not found, so one was created. Aborting...")
 
 
-if not os.path.exists("thumb"):
-    os.makedirs("thumb")
+if not os.path.exists("thumbs"):
+    os.makedirs("thumbs")
 
 for channel in rawChannelList:
     if channel != "":
