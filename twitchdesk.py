@@ -12,7 +12,7 @@ __version__ = "1.0.0-rc.1"
 KEY = ""
 HEADERS = ""
 HERE = os.path.dirname(os.path.realpath(__file__))
-INTERVAL = 60
+INTERVAL = 120
 DEBUG = False
 SOUND = True
 
