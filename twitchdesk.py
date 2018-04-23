@@ -7,12 +7,12 @@ import time
 
 # == Variables
 
-__version__ = "1.0.0-rc.1"
+__version__ = "1.0.0"
 
 KEY = ""
 HEADERS = ""
 HERE = os.path.dirname(os.path.realpath(__file__))
-INTERVAL = 120
+INTERVAL = 180
 DEBUG = False
 SOUND = True
 
@@ -30,6 +30,10 @@ except ImportError as e:
 
 # == Functions
 
+def absPath(path):
+    return HERE +  "/" + path
+
+
 def notify(title, text="", icon="", ):
     subprocess.Popen(["notify-send", "-i", icon, title, text])
     if DEBUG:
@@ -45,25 +49,28 @@ def error(msg):
 
 
 def download(url, filename):
-    if not os.path.isfile(filename):
+    path = absPath(filename)
+    if not os.path.isfile(path):
         dlResponse = requests.get(url)
         if dlResponse.status_code == 200:
-            with open(filename, 'wb') as f:
+            with open(path, 'wb') as f:
                 f.write(dlResponse.content)
-                print("Downloading " + url + " to " + filename)
+                print("Downloading " + url + " to " + path)
             return True
         else:
             return False
     else:
-        print("Reading from " + filename)
+        print("Reading from " + path)
         return True
 
 
 def readFile(filename):
-    if os.path.exists(filename):
+    path = absPath(filename)
+    if os.path.exists(path):
         try:
-            file = open(filename, "r")
+            file = open(path, "r")
             output = file.read()
+            print(path)
             file.close()
             return output
         except IOError as e:
@@ -76,7 +83,7 @@ def readFile(filename):
 def sound(file):
     if not SOUND:
         return
-    playsound(file)
+    playsound(absPath(file))
 
 
 def update():
@@ -109,24 +116,25 @@ def update():
                     error("Could not download profile image from Twitch!")
 
                 notify(displayName + " is now online on Twitch!", desc + "\nViewers: " + str(viewerCount), HERE + "/thumbs/" + name + ".png")
-                playsound("notify.wav")
+                sound("notify.wav")
 
 
 # == Main Body
 
 KEY = readFile("id.txt").replace("\n","")
+
 if KEY:
     HEADERS = {'Accept' : 'application/vnd.twitchtv.v5+json', 'Client-ID': KEY}
 else:
-    error("Please add a Twitch Client ID to your id.txt file! Aborting...")
+    error("Please add a Twitch Client ID to your id.txt file! Aborting...\n")
 
 rawChannelList = readFile("channels.txt").split("\n")
 if not rawChannelList:
     error("A channel.txt file was not found, so one was created. Aborting...")
 
-
-if not os.path.exists("thumbs"):
-    os.makedirs("thumbs")
+thumbDir = absPath("thumbs")
+if not os.path.exists(thumbDir):
+    os.makedirs(thumbDir)
 
 for channel in rawChannelList:
     if channel != "":
